@@ -1,0 +1,9 @@
+#Luis Fernando Martinez Barragan - @lfmbarragan - linkedin.com/in/barraganlf
+#Estos datos deberan ser rellenados con los siguientes datos:
+#Es recomendable al menos colocar 5 palabras, palabras una tras otra con una coma (,) de por medio
+PalabrasClave=PPG,Comex,pintura,blanca,exterior
+#Parametro Numero de palabras que debera contener una misma publicacion para generar una alerta: 
+NPalabras=1
+#Credenciales
+Usuario=4731746998
+Contraseña=QWERTYuiop321
