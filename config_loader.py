@@ -1,3 +1,6 @@
+import os
+
+
 class ConfigLoader:
     def __init__(self, archivo='setup.txt'):
         self.archivo = archivo
@@ -37,12 +40,14 @@ class ConfigLoader:
             return 1
     
     def get_usuario(self):
-        """Retorna el usuario"""
-        return self.datos.get('Usuario', '')
-    
+        """Retorna el usuario. Prioriza la variable de entorno FB_USUARIO
+        (usada en local y en GitHub Actions) sobre setup.txt."""
+        return os.environ.get('FB_USUARIO') or self.datos.get('Usuario', '')
+
     def get_contraseña(self):
-        """Retorna la contraseña"""
-        return self.datos.get('Contraseña', '')
+        """Retorna la contraseña. Prioriza la variable de entorno FB_CONTRASENA
+        (usada en local y en GitHub Actions) sobre setup.txt."""
+        return os.environ.get('FB_CONTRASENA') or self.datos.get('Contraseña', '')
     
     def validar(self):
         """Valida que todos los datos esten presentes"""
