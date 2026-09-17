@@ -36,6 +36,11 @@ jobs:
           HEADLESS: "true"
         run: python main.py
 
+      - name: Copiar como ultimo resultado
+        run: |
+          ultimo=$(ls -t results/*.csv | head -n 1)
+          cp "$ultimo" results/latest.csv
+
       - name: Publicar resultados nuevos en el repo
         run: |
           git config user.name "radar-comercial-bot"
