@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Radar Comercial - PPG</title>
+</head>
+<body>
+
+  <h1>Radar Comercial - PPG</h1>
+  <p>Detecciones de venta no autorizada en Facebook Marketplace</p>
+
+  <hr>
+
+  <h2>Acceso</h2>
+  <div id="login-box">
+    <label for="password">Contraseña del SOC:</label>
+    <input type="password" id="password" name="password">
+    <button onclick="verificarAcceso()">Entrar</button>
+    <p id="login-error"></p>
+  </div>
+
+  <div id="contenido" style="display:none">
+
+    <h2>Filtros</h2>
+    <p>
+      <label for="filtro-lugar">Lugar:</label>
+      <input type="text" id="filtro-lugar" onkeyup="filtrarTabla()">
+
+      <label for="filtro-texto">Texto:</label>
+      <input type="text" id="filtro-texto" onkeyup="filtrarTabla()">
+    </p>
+
+    <h2>Resultados</h2>
+    <table id="tabla-resultados" border="1">
+      <thead>
+        <tr>
+          <th>Enlace</th>
+          <th>Nombre del perfil</th>
+          <th>Fecha de publicacion</th>
+          <th>Lugar</th>
+        </tr>
+      </thead>
+      <tbody id="tabla-body">
+        <!-- Las filas se llenan con JS -->
+      </tbody>
+    </table>
+
+    <p><button onclick="descargarCSV()">Descargar CSV</button></p>
+
+  </div>
+
+  <script>
+    // Placeholder: cuando exista un backend real, la validacion de la
+    // contraseña debe pasar por el servidor, no quedarse aqui en el HTML.
+    // Mientras el repo sea publico, evitar conectar datos reales sensibles.
+    const PASSWORD_TEMPORAL = "cambiar-esto";
+
+    function verificarAcceso() {
+      const valor = document.getElementById('password').value;
+      if (valor === PASSWORD_TEMPORAL) {
+        document.getElementById('login-box').style.display = 'none';
+        document.getElementById('contenido').style.display = 'block';
+        cargarDatos();
+      } else {
+        document.getElementById('login-error').innerText = 'Contraseña incorrecta';
+      }
+    }
+
+    function parseCSV(texto) {
+      const filas = [];
+      let fila = [];
+      let campo = "";
+      let dentroComillas = false;
+
+      for (let i = 0; i < texto.length; i++) {
+        const c = texto[i];
+
+        if (dentroComillas) {
+          if (c === '"') {
+            if (texto[i + 1] === '"') { campo += '"'; i++; }
+            else { dentroComillas = false; }
+          } else {
+            campo += c;
+          }
+        } else {
+          if (c === '"') {
+            dentroComillas = true;
+          } else if (c === ',') {
+            fila.push(campo);
+            campo = "";
+          } else if (c === '\n' || c === '\r') {
+            if (c === '\r' && texto[i + 1] === '\n') i++;
+            fila.push(campo);
+            filas.push(fila);
+            fila = [];
+            campo = "";
+          } else {
+            campo += c;
+          }
+        }
+      }
+
+      if (campo.length > 0 || fila.length > 0) {
+        fila.push(campo);
+        filas.push(fila);
+      }
+
+      return filas;
+    }
+
+    // Lee los resultados reales publicados por el workflow semanal
+    // (.github/workflows/scrape.yml los deja en results/latest.csv).
+    function cargarDatos() {
+      fetch('results/latest.csv')
+        .then(function (resp) { return resp.text(); })
+        .then(function (texto) {
+          const filas = parseCSV(texto);
+          const registros = filas.slice(1).filter(function (f) { return f.length > 1; });
+
+          const cuerpo = document.getElementById('tabla-body');
+          cuerpo.innerHTML = "";
+
+          registros.forEach(function (campos) {
+            const enlace = campos[0];
+            const perfil = campos[1];
+            const fecha = campos[2];
+            const lugar = campos[3];
+
+            const tr = document.createElement('tr');
+            tr.innerHTML =
+              "<td><a href='" + enlace + "' target='_blank'>" + enlace + "</a></td>" +
+              "<td>" + perfil + "</td>" +
+              "<td>" + fecha + "</td>" +
+              "<td>" + lugar + "</td>";
+            cuerpo.appendChild(tr);
+          });
+        })
+        .catch(function (err) {
+          document.getElementById('tabla-body').innerHTML =
+            "<tr><td colspan='4'>No se pudieron cargar los resultados (" + err + ")</td></tr>";
+        });
+    }
+
+    function filtrarTabla() {
+      const lugar = document.getElementById('filtro-lugar').value.toLowerCase();
+      const texto = document.getElementById('filtro-texto').value.toLowerCase();
+      const filas = document.getElementById('tabla-body').getElementsByTagName('tr');
+
+      for (let i = 0; i < filas.length; i++) {
+        const celdas = filas[i].getElementsByTagName('td');
+        if (celdas.length < 4) continue;
+
+        const perfil = celdas[1].innerText.toLowerCase();
+        const lugarCelda = celdas[3].innerText.toLowerCase();
+
+        const coincideLugar = lugarCelda.includes(lugar);
+        const coincideTexto = perfil.includes(texto);
+
+        filas[i].style.display = (coincideLugar && coincideTexto) ? "" : "none";
+      }
+    }
+
+    function descargarCSV() {
+      let csv = "Enlace,Nombre del perfil,Fecha de publicacion,Lugar\n";
+      const filas = document.getElementById('tabla-body').getElementsByTagName('tr');
+
+      for (let i = 0; i < filas.length; i++) {
+        if (filas[i].style.display === "none") continue;
+        const celdas = filas[i].getElementsByTagName('td');
+        if (celdas.length < 4) continue;
+
+        const enlace = celdas[0].innerText;
+        const perfil = celdas[1].innerText.replace(/,/g, ";");
+        const fecha = celdas[2].innerText;
+        const lugar = celdas[3].innerText.replace(/,/g, ";");
+        csv += enlace + "," + perfil + "," + fecha + "," + lugar + "\n";
+      }
+
+      const blob = new Blob([csv], { type: "text/csv" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "detecciones_filtradas.csv";
+      link.click();
+    }
+  </script>
+
+</body>
+</html>

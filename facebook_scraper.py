@@ -46,7 +46,12 @@ class FacebookScraper:
         options.add_argument('--disable-blink-features=AutomationControlled')
         options.add_argument('--no-sandbox')
         options.add_argument('--disable-dev-shm-usage')
-        
+
+        # Modo sin pantalla (necesario al correr en GitHub Actions / servidores sin GUI)
+        if os.environ.get('HEADLESS', '').lower() in ('1', 'true', 'yes'):
+            options.add_argument('--headless=new')
+            options.add_argument('--window-size=1920,1080')
+
         self.driver = webdriver.Chrome(options=options)
         self.delay_aleatorio(1, 2)
     

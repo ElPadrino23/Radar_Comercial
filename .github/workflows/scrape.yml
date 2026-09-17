@@ -1,0 +1,50 @@
+name: Radar Comercial - Busqueda periodica
+
+on:
+  schedule:
+    # Cada lunes 09:00 UTC (~1 vez por semana, dentro del rango de 7-10 dias solicitado)
+    - cron: '0 9 * * 1'
+  workflow_dispatch: {}   # permite lanzarlo manualmente desde la pestaña Actions de GitHub
+
+permissions:
+  contents: write
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - uses: browser-actions/setup-chrome@v1
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+
+      - name: Restaurar sesion de Facebook (cookies)
+        env:
+          FB_COOKIES_B64: ${{ secrets.FB_COOKIES_B64 }}
+        run: echo "$FB_COOKIES_B64" | base64 -d > cookies.pkl
+
+      - name: Ejecutar busqueda
+        env:
+          FB_USUARIO: ${{ secrets.FB_USUARIO }}
+          FB_CONTRASENA: ${{ secrets.FB_CONTRASENA }}
+          HEADLESS: "true"
+        run: python main.py
+
+      - name: Copiar como ultimo resultado
+        run: |
+          ultimo=$(ls -t results/*.csv | head -n 1)
+          cp "$ultimo" results/latest.csv
+
+      - name: Publicar resultados nuevos en el repo
+        run: |
+          git config user.name "radar-comercial-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add results/
+          git diff --cached --quiet || git commit -m "Resultados automaticos $(date -u +%F)"
+          git push

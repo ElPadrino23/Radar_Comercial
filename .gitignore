@@ -1,0 +1,12 @@
+# Sesion de Facebook / credenciales locales - nunca deben subirse al repo
+cookies.pkl
+.env
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Streamlit
+.streamlit/secrets.toml
