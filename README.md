@@ -29,3 +29,4 @@ Secret necesario en Streamlit Cloud (App settings → Secrets):
 
 
 https://lucid.app/lucidchart/f4a21e98-c9de-478f-8ac7-0da5a7eeec04/edit
+https://lucid.app/lucidchart/f4a21e98-c9de-478f-8ac7-0da5a7eeec04/view
