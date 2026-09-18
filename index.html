@@ -28,6 +28,18 @@
 
       <label for="filtro-texto">Texto:</label>
       <input type="text" id="filtro-texto" onkeyup="filtrarTabla()">
+
+      <label for="filtro-clasificacion">Clasificacion:</label>
+      <select id="filtro-clasificacion" onchange="filtrarTabla()">
+        <option value="">Todos</option>
+        <option value="TP">TP</option>
+        <option value="FP">FP</option>
+        <option value="sin-clasificar">Sin clasificar</option>
+      </select>
+    </p>
+    <p>
+      Nota: la clasificacion, la lista y las notas se guardan solo en este navegador (localStorage),
+      no se comparten entre distintas personas del SOC todavia.
     </p>
 
     <h2>Resultados</h2>
@@ -38,6 +50,9 @@
           <th>Nombre del perfil</th>
           <th>Fecha de publicacion</th>
           <th>Lugar</th>
+          <th>Clasificacion</th>
+          <th>Lista</th>
+          <th>Notas</th>
         </tr>
       </thead>
       <tbody id="tabla-body">
@@ -108,6 +123,38 @@
       return filas;
     }
 
+    // Clasificacion, lista negra/blanca y notas por deteccion. Se guardan en
+    // localStorage, por navegador/persona - todavia no es compartido entre el SOC.
+    const CLAVE_ESTADO = "radar_comercial_estado_detecciones";
+
+    function cargarEstados() {
+      try {
+        return JSON.parse(localStorage.getItem(CLAVE_ESTADO)) || {};
+      } catch (e) {
+        return {};
+      }
+    }
+
+    function guardarEstado(enlace, campo, valor) {
+      const estados = cargarEstados();
+      if (!estados[enlace]) estados[enlace] = { clasificacion: "", lista: "", notas: "" };
+      estados[enlace][campo] = valor;
+      localStorage.setItem(CLAVE_ESTADO, JSON.stringify(estados));
+    }
+
+    function crearSelect(opciones, valorActual, onCambio) {
+      const select = document.createElement('select');
+      opciones.forEach(function (opcion) {
+        const opt = document.createElement('option');
+        opt.value = opcion[0];
+        opt.text = opcion[1];
+        if (opcion[0] === valorActual) opt.selected = true;
+        select.appendChild(opt);
+      });
+      select.onchange = function () { onCambio(select.value); };
+      return select;
+    }
+
     // Lee los resultados reales publicados por el workflow semanal
     // (.github/workflows/scrape.yml los deja en results/latest.csv).
     function cargarDatos() {
@@ -116,6 +163,7 @@
         .then(function (texto) {
           const filas = parseCSV(texto);
           const registros = filas.slice(1).filter(function (f) { return f.length > 1; });
+          const estados = cargarEstados();
 
           const cuerpo = document.getElementById('tabla-body');
           cuerpo.innerHTML = "";
@@ -125,55 +173,107 @@
             const perfil = campos[1];
             const fecha = campos[2];
             const lugar = campos[3];
+            const estado = estados[enlace] || { clasificacion: "", lista: "", notas: "" };
 
             const tr = document.createElement('tr');
-            tr.innerHTML =
-              "<td><a href='" + enlace + "' target='_blank'>" + enlace + "</a></td>" +
-              "<td>" + perfil + "</td>" +
-              "<td>" + fecha + "</td>" +
-              "<td>" + lugar + "</td>";
+
+            const tdEnlace = document.createElement('td');
+            tdEnlace.innerHTML = "<a href='" + enlace + "' target='_blank'>" + enlace + "</a>";
+
+            const tdPerfil = document.createElement('td');
+            tdPerfil.innerText = perfil;
+
+            const tdFecha = document.createElement('td');
+            tdFecha.innerText = fecha;
+
+            const tdLugar = document.createElement('td');
+            tdLugar.innerText = lugar;
+
+            const tdClasificacion = document.createElement('td');
+            tdClasificacion.appendChild(crearSelect(
+              [["", "Sin clasificar"], ["TP", "TP"], ["FP", "FP"]],
+              estado.clasificacion,
+              function (valor) { guardarEstado(enlace, 'clasificacion', valor); }
+            ));
+
+            const tdLista = document.createElement('td');
+            tdLista.appendChild(crearSelect(
+              [["", "Ninguna"], ["negra", "Lista negra"], ["blanca", "Lista blanca"]],
+              estado.lista,
+              function (valor) { guardarEstado(enlace, 'lista', valor); }
+            ));
+
+            const tdNotas = document.createElement('td');
+            const inputNotas = document.createElement('input');
+            inputNotas.type = "text";
+            inputNotas.size = 25;
+            inputNotas.value = estado.notas || "";
+            inputNotas.onchange = function () { guardarEstado(enlace, 'notas', inputNotas.value); };
+            tdNotas.appendChild(inputNotas);
+
+            tr.appendChild(tdEnlace);
+            tr.appendChild(tdPerfil);
+            tr.appendChild(tdFecha);
+            tr.appendChild(tdLugar);
+            tr.appendChild(tdClasificacion);
+            tr.appendChild(tdLista);
+            tr.appendChild(tdNotas);
+
             cuerpo.appendChild(tr);
           });
         })
         .catch(function (err) {
           document.getElementById('tabla-body').innerHTML =
-            "<tr><td colspan='4'>No se pudieron cargar los resultados (" + err + ")</td></tr>";
+            "<tr><td colspan='7'>No se pudieron cargar los resultados (" + err + ")</td></tr>";
         });
     }
 
     function filtrarTabla() {
       const lugar = document.getElementById('filtro-lugar').value.toLowerCase();
       const texto = document.getElementById('filtro-texto').value.toLowerCase();
+      const clasificacionFiltro = document.getElementById('filtro-clasificacion').value;
       const filas = document.getElementById('tabla-body').getElementsByTagName('tr');
 
       for (let i = 0; i < filas.length; i++) {
         const celdas = filas[i].getElementsByTagName('td');
-        if (celdas.length < 4) continue;
+        if (celdas.length < 7) continue;
 
         const perfil = celdas[1].innerText.toLowerCase();
         const lugarCelda = celdas[3].innerText.toLowerCase();
+        const selectClasificacion = celdas[4].getElementsByTagName('select')[0];
+        const clasificacionCelda = selectClasificacion.value;
 
         const coincideLugar = lugarCelda.includes(lugar);
         const coincideTexto = perfil.includes(texto);
+        let coincideClasificacion = true;
+        if (clasificacionFiltro === "sin-clasificar") {
+          coincideClasificacion = clasificacionCelda === "";
+        } else if (clasificacionFiltro !== "") {
+          coincideClasificacion = clasificacionCelda === clasificacionFiltro;
+        }
 
-        filas[i].style.display = (coincideLugar && coincideTexto) ? "" : "none";
+        filas[i].style.display = (coincideLugar && coincideTexto && coincideClasificacion) ? "" : "none";
       }
     }
 
     function descargarCSV() {
-      let csv = "Enlace,Nombre del perfil,Fecha de publicacion,Lugar\n";
+      let csv = "Enlace,Nombre del perfil,Fecha de publicacion,Lugar,Clasificacion,Lista,Notas\n";
       const filas = document.getElementById('tabla-body').getElementsByTagName('tr');
 
       for (let i = 0; i < filas.length; i++) {
         if (filas[i].style.display === "none") continue;
         const celdas = filas[i].getElementsByTagName('td');
-        if (celdas.length < 4) continue;
+        if (celdas.length < 7) continue;
 
         const enlace = celdas[0].innerText;
         const perfil = celdas[1].innerText.replace(/,/g, ";");
         const fecha = celdas[2].innerText;
         const lugar = celdas[3].innerText.replace(/,/g, ";");
-        csv += enlace + "," + perfil + "," + fecha + "," + lugar + "\n";
+        const clasificacion = celdas[4].getElementsByTagName('select')[0].value;
+        const lista = celdas[5].getElementsByTagName('select')[0].value;
+        const notas = celdas[6].getElementsByTagName('input')[0].value.replace(/,/g, ";");
+
+        csv += enlace + "," + perfil + "," + fecha + "," + lugar + "," + clasificacion + "," + lista + "," + notas + "\n";
       }
 
       const blob = new Blob([csv], { type: "text/csv" });
