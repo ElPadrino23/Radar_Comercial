@@ -38,8 +38,8 @@
       </select>
     </p>
     <p>
-      Nota: la clasificacion, la lista y las notas se guardan solo en este navegador (localStorage),
-      no se comparten entre distintas personas del SOC todavia.
+      Nota: la clasificacion, la lista y las notas se guardan en Firestore y son compartidas
+      por todo el SOC (cualquiera que entre a esta pagina ve las mismas marcas).
     </p>
 
     <h2>Resultados</h2>
@@ -64,8 +64,23 @@
 
   </div>
 
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
   <script>
-    // Placeholder: cuando exista un backend real, la validacion de la
+    // Config de Firebase del proyecto (Consola de Firebase -> Configuracion del
+    // proyecto -> Tus apps -> app Web). Estos valores son publicos por diseño en
+    // apps de Firebase; la seguridad real la dan las Reglas de Firestore, no
+    // ocultar esta config.
+    const firebaseConfig = {
+      apiKey: "PON_AQUI_TU_API_KEY",
+      authDomain: "PON_AQUI_TU_PROYECTO.firebaseapp.com",
+      projectId: "PON_AQUI_TU_PROYECTO"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // Placeholder: cuando exista autenticacion real, la validacion de la
     // contraseña debe pasar por el servidor, no quedarse aqui en el HTML.
     // Mientras el repo sea publico, evitar conectar datos reales sensibles.
     const PASSWORD_TEMPORAL = "SOC2026";
@@ -123,23 +138,34 @@
       return filas;
     }
 
-    // Clasificacion, lista negra/blanca y notas por deteccion. Se guardan en
-    // localStorage, por navegador/persona - todavia no es compartido entre el SOC.
-    const CLAVE_ESTADO = "radar_comercial_estado_detecciones";
+    // Clasificacion, lista negra/blanca y notas por deteccion. Se guardan en la
+    // coleccion "detecciones" de Firestore, compartida entre todo el SOC.
+    // El id del documento se deriva de la URL (los ids de Firestore no pueden
+    // llevar "/", que las URLs siempre tienen).
+    function idDesdeUrl(url) {
+      let hash = 0;
+      for (let i = 0; i < url.length; i++) {
+        hash = ((hash << 5) - hash + url.charCodeAt(i)) | 0;
+      }
+      return "d" + Math.abs(hash);
+    }
 
     function cargarEstados() {
-      try {
-        return JSON.parse(localStorage.getItem(CLAVE_ESTADO)) || {};
-      } catch (e) {
-        return {};
-      }
+      return db.collection('detecciones').get().then(function (snapshot) {
+        const estados = {};
+        snapshot.forEach(function (doc) {
+          const datos = doc.data();
+          if (datos.enlace) estados[datos.enlace] = datos;
+        });
+        return estados;
+      });
     }
 
     function guardarEstado(enlace, campo, valor) {
-      const estados = cargarEstados();
-      if (!estados[enlace]) estados[enlace] = { clasificacion: "", lista: "", notas: "" };
-      estados[enlace][campo] = valor;
-      localStorage.setItem(CLAVE_ESTADO, JSON.stringify(estados));
+      const cambio = { enlace: enlace };
+      cambio[campo] = valor;
+      db.collection('detecciones').doc(idDesdeUrl(enlace)).set(cambio, { merge: true })
+        .catch(function (err) { alert('No se pudo guardar en Firestore: ' + err); });
     }
 
     function crearSelect(opciones, valorActual, onCambio) {
@@ -158,12 +184,16 @@
     // Lee los resultados reales publicados por el workflow semanal
     // (.github/workflows/scrape.yml los deja en results/latest.csv).
     function cargarDatos() {
-      fetch('results/latest.csv')
-        .then(function (resp) { return resp.text(); })
-        .then(function (texto) {
+      const promesaCSV = fetch('results/latest.csv').then(function (resp) { return resp.text(); });
+      const promesaEstados = cargarEstados();
+
+      Promise.all([promesaCSV, promesaEstados])
+        .then(function (resultados) {
+          const texto = resultados[0];
+          const estados = resultados[1];
+
           const filas = parseCSV(texto);
           const registros = filas.slice(1).filter(function (f) { return f.length > 1; });
-          const estados = cargarEstados();
 
           const cuerpo = document.getElementById('tabla-body');
           cuerpo.innerHTML = "";
