@@ -26,3 +26,6 @@ Secrets necesarios en GitHub (Settings → Secrets and variables → Actions):
 
 Secret necesario en Streamlit Cloud (App settings → Secrets):
 - `SOC_PASSWORD`: contraseña compartida para que el equipo del SOC entre a ver los resultados.
+
+
+https://lucid.app/lucidchart/f4a21e98-c9de-478f-8ac7-0da5a7eeec04/edit
