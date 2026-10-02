@@ -1,0 +1,56 @@
+# Equivalente a .github/workflows/scrape.yml, para Azure Pipelines.
+# Ajusta la URL del repo en el ultimo step una vez que sepas el nombre
+# exacto del proyecto/repo en Azure DevOps (org "ppgit").
+
+trigger: none
+
+schedules:
+  - cron: "0 9 * * 1"
+    displayName: "Corrida semanal (lunes 9:00 UTC)"
+    branches:
+      include:
+        - main
+    always: true
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+steps:
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '3.11'
+
+  - script: |
+      sudo apt-get update
+      sudo apt-get install -y google-chrome-stable
+    displayName: 'Instalar Chrome'
+
+  - script: pip install -r requirements.txt
+    displayName: 'Instalar dependencias'
+
+  - script: echo "$FB_COOKIES_B64" | base64 -d > cookies.pkl
+    displayName: 'Restaurar sesion de Facebook (cookies)'
+    env:
+      FB_COOKIES_B64: $(FB_COOKIES_B64)
+
+  - script: python main.py
+    displayName: 'Ejecutar busqueda'
+    env:
+      FB_USUARIO: $(FB_USUARIO)
+      FB_CONTRASENA: $(FB_CONTRASENA)
+      HEADLESS: 'true'
+
+  - script: |
+      ultimo=$(ls -t results/*.csv | head -n 1)
+      cp "$ultimo" results/latest.csv
+    displayName: 'Copiar como ultimo resultado'
+
+  - script: |
+      git config user.name "radar-comercial-bot"
+      git config user.email "azure-pipelines@ppg.com"
+      git add results/
+      git diff --cached --quiet || git commit -m "Resultados automaticos $(date -u +%F)"
+      git push "https://$(System.AccessToken)@dev.azure.com/ppgit/Brand%20Protection/_git/Brand%20Protection" HEAD:main
+    displayName: 'Publicar resultados nuevos en el repo'
+    env:
+      SYSTEM_ACCESSTOKEN: $(System.AccessToken)
