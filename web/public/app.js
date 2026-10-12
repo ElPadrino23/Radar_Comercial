@@ -182,7 +182,7 @@
   // ------------------------------------------------------------------
   function setEstado(texto, tipo) {
     const el = $('estado');
-    el.textContent = (tipo === 'err' ? '⚠ ' : '') + texto;
+    el.textContent = texto;
   }
 
   function formatoTiempo(ms) {
