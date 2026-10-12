@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Radar Comercial - PPG</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ===== Login ===== -->
+  <section id="vista-login" class="login">
+    <form id="form-login" class="tarjeta" autocomplete="on">
+      <h1>Radar Comercial</h1>
+      <p class="muted">Acceso exclusivo del equipo SOC</p>
+
+      <label for="login-correo">Correo</label>
+      <input type="email" id="login-correo" autocomplete="username" required>
+
+      <label for="login-clave">Contraseña</label>
+      <input type="password" id="login-clave" autocomplete="current-password" required>
+
+      <button type="submit" class="primario" id="btn-entrar">Entrar</button>
+      <p id="login-error" class="msg err" role="alert"></p>
+    </form>
+  </section>
+
+  <!-- ===== App ===== -->
+  <div id="app" hidden>
+    <header class="barra">
+      <strong class="marca">Radar Comercial</strong>
+      <nav id="menu" class="menu" role="tablist" aria-label="Módulos"></nav>
+      <span class="sesion">
+        <span id="usuario" class="muted"></span>
+        <button type="button" id="btn-salir">Salir</button>
+      </span>
+    </header>
+
+    <main>
+      <!-- Modulo 1: busqueda -->
+      <section class="modulo" data-id="busqueda">
+        <h2>Búsqueda en Marketplace</h2>
+        <p class="muted">
+          Escribe las palabras clave separadas por coma y lanza la búsqueda. Tarda varios minutos;
+          puedes dejar esta página abierta. Si lo dejas vacío se usan las palabras de <code>setup.txt</code>.
+        </p>
+
+        <div class="fila">
+          <input type="text" id="palabras" maxlength="200"
+                 placeholder="Ej.: Comex, Vinci, impermeabilizante, sellador">
+          <button type="button" class="primario" id="btn-buscar">Buscar</button>
+          <button type="button" id="btn-ultimos">Ver últimos resultados</button>
+        </div>
+
+        <p id="estado" class="msg" role="status" aria-live="polite"></p>
+
+        <div id="zona-resultados" hidden>
+          <h3>Resultados</h3>
+          <div class="fila filtros">
+            <label>Lugar <input type="text" id="filtro-lugar"></label>
+            <label>Texto <input type="text" id="filtro-texto"></label>
+            <label>Clasificación
+              <select id="filtro-clasificacion">
+                <option value="">Todos</option>
+                <option value="TP">TP</option>
+                <option value="FP">FP</option>
+                <option value="sin-clasificar">Sin clasificar</option>
+              </select>
+            </label>
+            <button type="button" id="btn-descargar">Descargar CSV</button>
+          </div>
+
+          <div class="tabla-wrap">
+            <table id="tabla-resultados">
+              <thead>
+                <tr>
+                  <th>Enlace</th>
+                  <th>Publicación</th>
+                  <th>Fecha</th>
+                  <th>Lugar</th>
+                  <th>Clasificación</th>
+                  <th>Lista</th>
+                  <th>Notas</th>
+                </tr>
+              </thead>
+              <tbody id="tabla-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Modulos 2 y 3: se generan desde modulos.js -->
+      <div id="modulos-extra"></div>
+    </main>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="config.js"></script>
+  <script src="modulos.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

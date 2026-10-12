@@ -1,0 +1,13 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Clasificacion, listas y notas de las detecciones: solo usuarios con sesion
+    match /detecciones/{doc} {
+      allow read, write: if request.auth != null;
+    }
+    // Todo lo demas, cerrado
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
