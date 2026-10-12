@@ -113,70 +113,57 @@
     const h = document.createElement('h2');
     h.textContent = m.titulo;
     const p = document.createElement('p');
-    p.className = 'muted';
     p.textContent = m.descripcion || '';
+    sec.append(h, p);
 
-    const video = document.createElement('div');
-    video.className = 'video';
     if (m.video) {
       const f = document.createElement('iframe');
       f.src = m.video;
       f.title = 'Video explicativo: ' + m.titulo;
-      f.loading = 'lazy';
+      f.width = 640;
+      f.height = 360;
       f.allowFullscreen = true;
       f.setAttribute('allow', 'fullscreen; picture-in-picture');
-      video.appendChild(f);
+      sec.appendChild(f);
     } else {
-      video.classList.add('video-vacio');
-      video.textContent = 'Aquí irá el video explicativo';
+      const v = document.createElement('p');
+      v.textContent = '[Aquí irá el video explicativo]';
+      sec.appendChild(v);
     }
 
-    const io = document.createElement('div');
-    io.className = 'io';
-
-    const colEntrada = document.createElement('div');
-    const lblEntrada = document.createElement('label');
+    const lblEntrada = document.createElement('h3');
     lblEntrada.textContent = 'Entrada';
     const entrada = document.createElement('textarea');
-    entrada.id = m.id + '-entrada';
+    entrada.rows = 12;
+    entrada.cols = 70;
     entrada.placeholder = m.entrada || '';
-    lblEntrada.htmlFor = entrada.id;
     const btnRun = document.createElement('button');
     btnRun.type = 'button';
-    btnRun.className = 'primario';
     btnRun.textContent = 'Ejecutar';
-    btnRun.style.marginTop = '.6rem';
-    colEntrada.append(lblEntrada, entrada, btnRun);
 
-    const colSalida = document.createElement('div');
-    const lblSalida = document.createElement('label');
+    const lblSalida = document.createElement('h3');
     lblSalida.textContent = 'Resultado';
     const salida = document.createElement('pre');
-    salida.setAttribute('aria-live', 'polite');
     const btnCopiar = document.createElement('button');
     btnCopiar.type = 'button';
     btnCopiar.textContent = 'Copiar resultado';
-    btnCopiar.style.marginTop = '.6rem';
-    colSalida.append(lblSalida, salida, btnCopiar);
 
-    io.append(colEntrada, colSalida);
-    sec.append(h, p, video, io);
+    sec.append(lblEntrada, entrada, document.createElement('br'), btnRun,
+      lblSalida, salida, btnCopiar);
 
     btnRun.addEventListener('click', async function () {
-      salida.style.color = '';
       try {
         const r = await m.ejecutar(entrada.value);
         salida.textContent = r === undefined || r === null ? '' : String(r);
       } catch (err) {
         salida.textContent = 'Error: ' + (err && err.message ? err.message : err);
-        salida.style.color = 'var(--err)';
       }
     });
 
     btnCopiar.addEventListener('click', async function () {
       try {
         await navigator.clipboard.writeText(salida.textContent);
-        btnCopiar.textContent = 'Copiado ✓';
+        btnCopiar.textContent = 'Copiado';
       } catch (e) {
         btnCopiar.textContent = 'No se pudo copiar';
       }
@@ -195,8 +182,7 @@
   // ------------------------------------------------------------------
   function setEstado(texto, tipo) {
     const el = $('estado');
-    el.textContent = texto;
-    el.className = 'msg' + (tipo ? ' ' + tipo : '');
+    el.textContent = (tipo === 'err' ? '⚠ ' : '') + texto;
   }
 
   function formatoTiempo(ms) {

@@ -5,7 +5,7 @@ Página del SOC: login, búsqueda en Marketplace (lanza el pipeline de DevOps a 
 ## Archivos
 - `public/config.js` - URL del Worker y config de Firebase (lo único que se edita para desplegar).
 - `public/modulos.js` - lógica de los módulos 2 y 3 y la URL de su video.
-- `public/app.js`, `index.html`, `style.css` - la página.
+- `public/app.js`, `public/index.html` - la página (HTML plano, sin CSS).
 - `firestore.rules` - solo usuarios con sesión leen/escriben las clasificaciones.
 
 ## Desplegar
